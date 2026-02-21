@@ -1,35 +1,70 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BlurView } from 'expo-blur';
+import { StyleSheet } from 'react-native';
+import { Home, ClipboardList, Package, Truck } from 'lucide-react-native';
+import { Colors, Radius } from '@/constants/theme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarStyle: styles.tabBar,
+        tabBarBackground: () => (
+          <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
+        ),
+        tabBarActiveTintColor: Colors.brown,
+        tabBarInactiveTintColor: Colors.brownMuted,
+        tabBarLabelStyle: styles.label,
+        tabBarItemStyle: styles.item,
+        tabBarShowLabel: false,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color, size }) => <Home size={size - 2} color={color} strokeWidth={1.8} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="tasks"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Tasks',
+          tabBarIcon: ({ color, size }) => <ClipboardList size={size - 2} color={color} strokeWidth={1.8} />,
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: 'Inventory',
+          tabBarIcon: ({ color, size }) => <Package size={size - 2} color={color} strokeWidth={1.8} />,
+        }}
+      />
+      <Tabs.Screen
+        name="movers"
+        options={{
+          title: 'Movers',
+          tabBarIcon: ({ color, size }) => <Truck size={size - 2} color={color} strokeWidth={1.8} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    position: 'absolute',
+    borderTopWidth: 0,
+    elevation: 0,
+    backgroundColor: 'transparent',
+  },
+  label: {
+    fontFamily: 'Fustat',
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  item: {
+    paddingTop: 8,
+  },
+});
