@@ -31,7 +31,15 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# Next.js
+web/.next/
+web/out/
+
+# Supabase
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

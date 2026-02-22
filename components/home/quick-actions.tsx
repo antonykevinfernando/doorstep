@@ -1,13 +1,13 @@
 import { View, Pressable, StyleSheet } from 'react-native';
-import { ClipboardList, PackagePlus, Truck, ArrowRight } from 'lucide-react-native';
+import { ClipboardList, PackagePlus, Truck, MessageCircle, ArrowRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 
 const actions = [
   { icon: ClipboardList, label: 'Tasks', route: '/(tabs)/tasks' as const },
+  { icon: MessageCircle, label: 'Messages', route: '/messages-screen' as const },
   { icon: PackagePlus, label: 'Add Box', route: '/add-box' as const },
-  { icon: Truck, label: 'Movers', route: '/(tabs)/movers' as const },
 ];
 
 export function QuickActions() {

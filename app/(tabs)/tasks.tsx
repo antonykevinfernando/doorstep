@@ -1,47 +1,48 @@
-import { useState, useCallback } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { Text } from '@/components/ui/text';
 import { TaskCategory } from '@/components/tasks/task-category';
-import { defaultTasks, type TaskCategory as TaskCategoryType } from '@/data/tasks';
 import { Colors, Spacing } from '@/constants/theme';
+import { useTasks, type TaskItem } from '@/hooks/use-tasks';
 
 export default function TasksScreen() {
   const insets = useSafeAreaInsets();
-  const [categories, setCategories] = useState<TaskCategoryType[]>(defaultTasks);
+  const { tasks, loading, toggle, completed, total } = useTasks();
 
-  const handleToggle = useCallback((taskId: string) => {
-    setCategories((prev) =>
-      prev.map((cat) => ({
-        ...cat,
-        tasks: cat.tasks.map((t) =>
-          t.id === taskId ? { ...t, completed: !t.completed } : t,
-        ),
-      })),
+  if (loading) {
+    return (
+      <ScreenContainer style={{ paddingTop: insets.top + Spacing.md }}>
+        <ActivityIndicator color={Colors.brown} style={{ marginTop: Spacing.xxl }} />
+      </ScreenContainer>
     );
-  }, []);
-
-  const allTasks = categories.flatMap((c) => c.tasks);
-  const completed = allTasks.filter((t) => t.completed).length;
+  }
 
   return (
     <ScreenContainer style={{ paddingTop: insets.top + Spacing.md }}>
-      <Text variant="title" style={styles.title}>
-        Checklist
-      </Text>
+      <Text variant="title" style={styles.title}>Checklist</Text>
       <Text variant="caption" color={Colors.brownMuted} style={styles.sub}>
-        {completed} of {allTasks.length} complete
+        {total > 0 ? `${completed} of ${total} complete` : 'No tasks yet'}
       </Text>
 
-      {categories.map((cat) => (
-        <TaskCategory
-          key={cat.id}
-          title={cat.title}
-          tasks={cat.tasks}
-          onToggle={handleToggle}
-        />
-      ))}
+      {total === 0 ? (
+        <View style={styles.empty}>
+          <Text variant="body" color={Colors.brownMuted} center>
+            Your property team hasn't assigned any tasks yet. Check back soon.
+          </Text>
+        </View>
+      ) : (
+        <View>
+          {tasks.map((task: TaskItem) => (
+            <TaskCategory
+              key={task.id}
+              title=""
+              tasks={[{ id: task.id, title: task.title, completed: task.completed }]}
+              onToggle={toggle}
+            />
+          ))}
+        </View>
+      )}
     </ScreenContainer>
   );
 }
@@ -52,5 +53,9 @@ const styles = StyleSheet.create({
   },
   sub: {
     marginBottom: Spacing.xl,
+  },
+  empty: {
+    paddingVertical: Spacing.xxl,
+    paddingHorizontal: Spacing.lg,
   },
 });

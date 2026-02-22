@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 9 40% 97%;
+    --foreground: 27 23% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 27 23% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 27 23% 15%;
+    --primary: 27 23% 15%;
+    --primary-foreground: 9 40% 97%;
+    --secondary: 20 20% 95%;
+    --secondary-foreground: 27 23% 15%;
+    --muted: 20 15% 94%;
+    --muted-foreground: 29 13% 55%;
+    --accent: 95 56% 84%;
+    --accent-foreground: 27 23% 15%;
+    --destructive: 0 64% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 27 10% 91%;
+    --input: 27 10% 91%;
+    --ring: 27 23% 15%;
+    --chart-1: 95 56% 84%;
+    --chart-2: 27 23% 15%;
+    --chart-3: 28 23% 29%;
+    --chart-4: 95 40% 70%;
+    --chart-5: 29 13% 55%;
+    --radius: 1.25rem;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+  }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
