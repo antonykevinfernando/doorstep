@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,20 +16,22 @@ export function MessageThread({ moves, currentUserId }: Props) {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const supabaseRef = useRef(createClient());
+
+  const loadMessages = useCallback(async (moveId: string) => {
+    const { data } = await supabaseRef.current
+      .from('messages')
+      .select('*, sender:profiles!messages_sender_id_fkey(full_name)')
+      .eq('move_id', moveId)
+      .order('created_at', { ascending: true });
+    if (data) setMessages(data);
+  }, []);
 
   useEffect(() => {
     if (!selectedMoveId) return;
-    const supabase = createClient();
+    const supabase = supabaseRef.current;
 
-    async function load() {
-      const { data } = await supabase
-        .from('messages')
-        .select('*, sender:profiles!messages_sender_id_fkey(full_name)')
-        .eq('move_id', selectedMoveId)
-        .order('created_at', { ascending: true });
-      setMessages(data ?? []);
-    }
-    load();
+    loadMessages(selectedMoveId);
 
     const channel = supabase
       .channel(`messages-${selectedMoveId}`)
@@ -42,13 +44,24 @@ export function MessageThread({ moves, currentUserId }: Props) {
             .select('*, sender:profiles!messages_sender_id_fkey(full_name)')
             .eq('id', payload.new.id)
             .single();
-          if (msg) setMessages((prev) => [...prev, msg]);
+          if (msg) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === msg.id)) return prev;
+              return [...prev, msg];
+            });
+          }
         },
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [selectedMoveId]);
+    function onFocus() { loadMessages(selectedMoveId); }
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [selectedMoveId, loadMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,14 +69,23 @@ export function MessageThread({ moves, currentUserId }: Props) {
 
   async function send() {
     if (!body.trim() || !selectedMoveId) return;
+    const text = body.trim();
+    setBody('');
     setSending(true);
-    const supabase = createClient();
-    await supabase.from('messages').insert({
+
+    const { data } = await supabaseRef.current.from('messages').insert({
       move_id: selectedMoveId,
       sender_id: currentUserId,
-      body: body.trim(),
-    });
-    setBody('');
+      body: text,
+    }).select('*, sender:profiles!messages_sender_id_fkey(full_name)').single();
+
+    if (data) {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev;
+        return [...prev, data];
+      });
+    }
+
     setSending(false);
   }
 
