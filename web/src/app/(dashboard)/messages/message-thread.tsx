@@ -18,6 +18,12 @@ export function MessageThread({ moves, currentUserId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabaseRef = useRef(createClient());
 
+  const markRead = useCallback(async (moveId: string) => {
+    await supabaseRef.current
+      .from('message_reads')
+      .upsert({ user_id: currentUserId, move_id: moveId, last_read_at: new Date().toISOString() }, { onConflict: 'user_id,move_id' });
+  }, [currentUserId]);
+
   const loadMessages = useCallback(async (moveId: string) => {
     const { data } = await supabaseRef.current
       .from('messages')
@@ -25,7 +31,8 @@ export function MessageThread({ moves, currentUserId }: Props) {
       .eq('move_id', moveId)
       .order('created_at', { ascending: true });
     if (data) setMessages(data);
-  }, []);
+    markRead(moveId);
+  }, [markRead]);
 
   useEffect(() => {
     if (!selectedMoveId) return;

@@ -1,10 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, FlatList, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  FlatList,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Platform,
+  ActivityIndicator,
+  Keyboard,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Colors, Spacing, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { useMessages, type MessageItem } from '@/hooks/use-messages';
+import { useUnread } from '@/hooks/use-unread';
+import { useMove } from '@/hooks/use-move';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/auth';
 
 function MessageBubble({ msg, isMe }: { msg: MessageItem; isMe: boolean }) {
   return (
@@ -22,14 +35,46 @@ function MessageBubble({ msg, isMe }: { msg: MessageItem; isMe: boolean }) {
 export default function MessagesScreenPage() {
   const insets = useSafeAreaInsets();
   const { messages, loading, send, currentUserId } = useMessages();
+  const { move } = useMove();
+  const { clearUnread } = useUnread(move?.id);
+  const { user } = useAuth();
   const [text, setText] = useState('');
   const listRef = useRef<FlatList>(null);
+  const [kbHeight, setKbHeight] = useState(0);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-    }
-  }, [messages.length]);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKbHeight(e.endCoordinates.height);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKbHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!move || !user) return;
+    clearUnread();
+    supabase
+      .from('message_reads')
+      .upsert(
+        { user_id: user.id, move_id: move.id, last_read_at: new Date().toISOString() },
+        { onConflict: 'user_id,move_id' },
+      )
+      .then();
+  }, [move, user, messages.length]);
+
+  const scrollToBottom = () => {
+    listRef.current?.scrollToEnd({ animated: false });
+  };
 
   async function handleSend() {
     if (!text.trim()) return;
@@ -37,12 +82,10 @@ export default function MessagesScreenPage() {
     setText('');
   }
 
+  const bottomPadding = kbHeight > 0 ? kbHeight + Spacing.sm : (insets.bottom || Spacing.sm);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
+    <View style={styles.container}>
       {loading ? (
         <ActivityIndicator color={Colors.brown} style={{ flex: 1 }} />
       ) : messages.length === 0 ? (
@@ -59,12 +102,16 @@ export default function MessagesScreenPage() {
           renderItem={({ item }) => (
             <MessageBubble msg={item} isMe={item.sender_id === currentUserId} />
           )}
-          contentContainerStyle={styles.list}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          onContentSizeChange={scrollToBottom}
+          onLayout={scrollToBottom}
         />
       )}
 
-      <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.xs }]}>
+      <View style={[styles.inputRow, { paddingBottom: bottomPadding }]}>
         <TextInput
           style={styles.input}
           value={text}
@@ -77,7 +124,7 @@ export default function MessagesScreenPage() {
           <Send size={20} color={text.trim() ? Colors.cream : Colors.brownMuted} strokeWidth={2} />
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -96,8 +143,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   list: {
+    flex: 1,
+  },
+  listContent: {
     gap: Spacing.sm,
     paddingBottom: Spacing.md,
+    flexGrow: 1,
+    justifyContent: 'flex-end',
   },
   bubbleRow: {
     flexDirection: 'row',

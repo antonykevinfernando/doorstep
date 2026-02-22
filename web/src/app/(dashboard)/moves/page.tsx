@@ -78,7 +78,7 @@ export default async function MovesPage() {
                   {move.type?.replace('_', ' ')}
                 </TableCell>
                 <TableCell>
-                  {new Date(move.scheduled_date).toLocaleDateString('en-US', {
+                  {new Date(move.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',

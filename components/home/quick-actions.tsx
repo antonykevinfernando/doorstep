@@ -1,16 +1,16 @@
-import { View, Pressable, StyleSheet } from 'react-native';
-import { ClipboardList, PackagePlus, Truck, MessageCircle, ArrowRight } from 'lucide-react-native';
+import { View, Pressable, StyleSheet, Text as RNText } from 'react-native';
+import { ClipboardList, PackagePlus, MessageCircle, ArrowRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
-import { Colors, Spacing, Radius } from '@/constants/theme';
+import { Colors, Spacing, Radius, FontFamily } from '@/constants/theme';
 
 const actions = [
   { icon: ClipboardList, label: 'Tasks', route: '/(tabs)/tasks' as const },
-  { icon: MessageCircle, label: 'Messages', route: '/messages-screen' as const },
+  { icon: MessageCircle, label: 'Messages', route: '/messages-screen' as const, badge: true },
   { icon: PackagePlus, label: 'Add Box', route: '/add-box' as const },
 ];
 
-export function QuickActions() {
+export function QuickActions({ unread = 0 }: { unread?: number }) {
   const router = useRouter();
 
   return (
@@ -27,6 +27,13 @@ export function QuickActions() {
           <Text variant="body" medium style={styles.label}>
             {action.label}
           </Text>
+          {action.badge && unread > 0 && (
+            <View style={styles.badge}>
+              <RNText style={styles.badgeText}>
+                {unread > 99 ? '99+' : String(unread)}
+              </RNText>
+            </View>
+          )}
           <ArrowRight size={16} color={Colors.brownMuted} strokeWidth={1.5} />
         </Pressable>
       ))}
@@ -62,5 +69,22 @@ const styles = StyleSheet.create({
   },
   label: {
     flex: 1,
+  },
+  badge: {
+    backgroundColor: '#E35D5D',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    fontFamily: FontFamily.regular,
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

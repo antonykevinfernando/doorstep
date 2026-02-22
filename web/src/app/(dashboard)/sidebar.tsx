@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -29,15 +29,46 @@ const navItems = [
 interface SidebarProps {
   displayName: string;
   role: string;
+  userId: string;
+  initialUnread: number;
 }
 
-export function Sidebar({ displayName, role }: SidebarProps) {
+export function Sidebar({ displayName, role, userId, initialUnread }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [unread, setUnread] = useState(initialUnread);
   const pathname = usePathname();
   const router = useRouter();
+  const supabaseRef = useRef(createClient());
+
+  // Live-update unread count via Realtime
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+
+    const channel = supabase
+      .channel('sidebar-messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          if (payload.new.sender_id !== userId) {
+            setUnread((prev) => prev + 1);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userId]);
+
+  // Clear badge when on messages page
+  useEffect(() => {
+    if (pathname.startsWith('/messages')) {
+      setUnread(0);
+    }
+  }, [pathname]);
 
   async function handleLogout() {
-    const supabase = createClient();
+    const supabase = supabaseRef.current;
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
@@ -69,12 +100,13 @@ export function Sidebar({ displayName, role }: SidebarProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname.startsWith(item.href);
+          const showBadge = item.href === '/messages' && unread > 0;
           return (
             <Link
               key={item.href}
               href={item.href}
               title={collapsed ? item.label : undefined}
-              className={`flex items-center rounded-xl text-sm font-medium transition-colors ${
+              className={`relative flex items-center rounded-xl text-sm font-medium transition-colors ${
                 collapsed
                   ? 'justify-center p-2.5'
                   : 'gap-3 px-3 py-2.5'
@@ -84,8 +116,18 @@ export function Sidebar({ displayName, role }: SidebarProps) {
                   : 'text-foreground/45 hover:text-foreground/80'
               }`}
             >
-              <Icon size={18} strokeWidth={1.8} className="shrink-0" />
+              <div className="relative shrink-0">
+                <Icon size={18} strokeWidth={1.8} />
+                {showBadge && collapsed && (
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+                )}
+              </div>
               {!collapsed && item.label}
+              {showBadge && !collapsed && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-white">
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              )}
             </Link>
           );
         })}

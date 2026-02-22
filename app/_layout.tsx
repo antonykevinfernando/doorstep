@@ -74,8 +74,12 @@ export default function RootLayout() {
             <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
             <Stack.Screen name="pending" options={{ headerShown: false }} />
             <Stack.Screen
+              name="profile"
+              options={{ title: 'Profile', headerBackTitle: 'Home' }}
+            />
+            <Stack.Screen
               name="messages-screen"
-              options={{ title: 'Messages' }}
+              options={{ title: 'Messages', headerBackTitle: 'Home' }}
             />
             <Stack.Screen
               name="add-box"
