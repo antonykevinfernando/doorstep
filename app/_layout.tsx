@@ -82,10 +82,6 @@ export default function RootLayout() {
               options={{ title: 'Messages', headerBackTitle: 'Home' }}
             />
             <Stack.Screen
-              name="add-box"
-              options={{ presentation: 'modal', title: 'New Box' }}
-            />
-            <Stack.Screen
               name="mover/[id]"
               options={{ title: '' }}
             />

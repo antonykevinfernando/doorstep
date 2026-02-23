@@ -224,19 +224,50 @@ export function CreateMoveDialog({ units, residents, buildings }: Props) {
       }
     } else {
       const supabase = createClient();
-      const { error: moveError } = await supabase.from('moves').insert({
+      const { data: moveData, error: moveError } = await supabase.from('moves').insert({
         type: form.type,
         resident_id: form.resident_id,
         unit_id: form.unit_id,
         scheduled_date: form.scheduled_date,
         time_slot: form.time_slot || null,
         notes: form.notes || null,
-      });
+      }).select('id').single();
 
       setLoading(false);
       if (moveError) {
         setError(moveError.message);
         return;
+      }
+
+      // Auto-populate move_tasks from checklist templates
+      if (moveData) {
+        const { data: unitRow } = await supabase.from('units').select('building_id').eq('id', form.unit_id).single();
+        if (unitRow?.building_id) {
+          const { data: templateItems } = await supabase
+            .from('checklist_template_items')
+            .select('title, type, description, config, sort_order, template_id, template:checklist_templates!inner(building_id)')
+            .order('sort_order', { ascending: true });
+
+          const matched = (templateItems ?? []).filter(
+            (item: any) => {
+              const bId = Array.isArray(item.template) ? item.template[0]?.building_id : item.template?.building_id;
+              return bId === unitRow.building_id;
+            }
+          );
+
+          if (matched.length > 0) {
+            await supabase.from('move_tasks').insert(
+              matched.map((item: any, idx: number) => ({
+                move_id: moveData.id,
+                title: item.title,
+                type: item.type,
+                description: item.description || null,
+                config: item.config || null,
+                sort_order: idx,
+              })),
+            );
+          }
+        }
       }
     }
 

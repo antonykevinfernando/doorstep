@@ -1,14 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MovesView } from './moves-view';
 import { CreateMoveDialog } from './create-move-dialog';
-
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-orange-100 text-orange-800',
-  completed: 'bg-green-100 text-green-800',
-};
 
 export default async function MovesPage() {
   const supabase = await createClient();
@@ -18,7 +10,7 @@ export default async function MovesPage() {
     .select(`
       *,
       resident:profiles!moves_resident_id_fkey(full_name),
-      unit:units!moves_unit_id_fkey(number, floor, building:buildings!units_building_id_fkey(name))
+      unit:units!moves_unit_id_fkey(number, floor, building_id, building:buildings!units_building_id_fkey(name))
     `)
     .order('scheduled_date', { ascending: false });
 
@@ -35,65 +27,45 @@ export default async function MovesPage() {
     .from('buildings')
     .select('id, name');
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Moves</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {moves?.length ?? 0} total moves
-          </p>
-        </div>
-        <CreateMoveDialog units={units ?? []} residents={residents ?? []} buildings={buildings ?? []} />
-      </div>
+  const { data: templates } = await supabase
+    .from('checklist_templates')
+    .select(`
+      *,
+      items:checklist_template_items(id, title, type, description, config, sort_order)
+    `)
+    .order('created_at', { ascending: false });
 
-      <div className="rounded-xl border border-black/5 bg-white/60 backdrop-blur-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Resident</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead>Building</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(!moves || moves.length === 0) && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  No moves yet. Create one to get started.
-                </TableCell>
-              </TableRow>
-            )}
-            {moves?.map((move: any) => (
-              <TableRow key={move.id}>
-                <TableCell className="font-medium">
-                  {move.resident?.full_name || '—'}
-                </TableCell>
-                <TableCell>{move.unit?.number || '—'}</TableCell>
-                <TableCell>{move.unit?.building?.name || '—'}</TableCell>
-                <TableCell className="capitalize">
-                  {move.type?.replace('_', ' ')}
-                </TableCell>
-                <TableCell>
-                  {new Date(move.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className={statusColors[move.status] ?? ''}>
-                    {move.status?.replace('_', ' ')}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+  const { data: taskCounts } = await supabase
+    .from('move_tasks')
+    .select('move_id');
+
+  const moveTaskMap: Record<string, number> = {};
+  for (const t of (taskCounts ?? [])) {
+    moveTaskMap[t.move_id] = (moveTaskMap[t.move_id] ?? 0) + 1;
+  }
+
+  return (
+    <MovesView
+      moves={(moves ?? []).map((m: any) => ({
+        id: m.id,
+        residentName: m.resident?.full_name || '—',
+        unitNumber: m.unit?.number || '—',
+        buildingName: m.unit?.building?.name || '—',
+        buildingId: m.unit?.building_id || '',
+        type: m.type,
+        scheduledDate: m.scheduled_date,
+        status: m.status,
+        taskCount: moveTaskMap[m.id] ?? 0,
+      }))}
+      templates={(templates ?? []).map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        buildingId: t.building_id,
+        items: (t.items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order),
+      }))}
+      createDialog={
+        <CreateMoveDialog units={units ?? []} residents={residents ?? []} buildings={buildings ?? []} />
+      }
+    />
   );
 }

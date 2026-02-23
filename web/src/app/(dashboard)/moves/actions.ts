@@ -80,7 +80,7 @@ export async function inviteResidentAndCreateMove(input: InviteAndCreateMoveInpu
     .eq('id', residentId);
 
   // Create the move
-  const { error: moveError } = await admin.from('moves').insert({
+  const { data: moveData, error: moveError } = await admin.from('moves').insert({
     type: input.type,
     status: 'confirmed',
     resident_id: residentId,
@@ -88,9 +88,31 @@ export async function inviteResidentAndCreateMove(input: InviteAndCreateMoveInpu
     scheduled_date: input.scheduledDate,
     time_slot: input.timeSlot || null,
     notes: input.notes || null,
-  });
+  }).select('id').single();
 
   if (moveError) return { error: moveError.message };
+
+  // Auto-populate move_tasks from checklist templates for this building
+  if (moveData) {
+    const { data: templateItems } = await admin
+      .from('checklist_template_items')
+      .select('title, type, description, config, sort_order, template:checklist_templates!inner(building_id)')
+      .eq('template:checklist_templates.building_id', input.buildingId)
+      .order('sort_order', { ascending: true });
+
+    if (templateItems && templateItems.length > 0) {
+      await admin.from('move_tasks').insert(
+        templateItems.map((item: any, idx: number) => ({
+          move_id: moveData.id,
+          title: item.title,
+          type: item.type,
+          description: item.description || null,
+          config: item.config || null,
+          sort_order: idx,
+        })),
+      );
+    }
+  }
 
   return { success: true, inviteLink: linkData.properties?.action_link };
 }

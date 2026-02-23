@@ -1,5 +1,5 @@
 import { View, Pressable, StyleSheet, Text as RNText } from 'react-native';
-import { ClipboardList, PackagePlus, MessageCircle, ArrowRight } from 'lucide-react-native';
+import { ClipboardList, FileText, MessageCircle, ArrowRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { Colors, Spacing, Radius, FontFamily } from '@/constants/theme';
@@ -7,7 +7,7 @@ import { Colors, Spacing, Radius, FontFamily } from '@/constants/theme';
 const actions = [
   { icon: ClipboardList, label: 'Tasks', route: '/(tabs)/tasks' as const },
   { icon: MessageCircle, label: 'Messages', route: '/messages-screen' as const, badge: true },
-  { icon: PackagePlus, label: 'Add Box', route: '/add-box' as const },
+  { icon: FileText, label: 'Documents', route: '/(tabs)/documents' as const },
 ];
 
 export function QuickActions({ unread = 0 }: { unread?: number }) {

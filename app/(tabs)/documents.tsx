@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, Pressable, Linking, ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FileText } from 'lucide-react-native';
+import { FileText, Upload } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Colors, Spacing, FontFamily, FontSize, Radius } from '@/constants/theme';
@@ -26,17 +26,20 @@ async function openDocument(filePath: string) {
 }
 
 function DocRow({ doc }: { doc: DocItem }) {
+  const isUploaded = doc.source === 'uploaded';
+  const Icon = isUploaded ? Upload : FileText;
+
   return (
     <Pressable onPress={() => openDocument(doc.file_path)}>
       <Card style={styles.card}>
         <View style={styles.row}>
-          <View style={styles.iconWrap}>
-            <FileText size={20} color={Colors.brown} strokeWidth={1.5} />
+          <View style={[styles.iconWrap, isUploaded && styles.iconWrapUploaded]}>
+            <Icon size={20} color={isUploaded ? Colors.greenDark : Colors.brown} strokeWidth={1.5} />
           </View>
           <View style={styles.info}>
             <Text variant="body" numberOfLines={1}>{doc.title}</Text>
             <Text variant="caption" color={Colors.brownMuted}>
-              {formatDate(doc.created_at)}{doc.file_size ? ` · ${formatSize(doc.file_size)}` : ''}
+              {isUploaded ? 'Your upload' : 'Shared'} · {formatDate(doc.created_at)}{doc.file_size ? ` · ${formatSize(doc.file_size)}` : ''}
             </Text>
           </View>
         </View>
@@ -53,7 +56,7 @@ export default function DocumentsScreen() {
     <View style={[styles.container, { paddingTop: insets.top + Spacing.md }]}>
       <Text variant="title" style={styles.title}>Documents</Text>
       <Text variant="caption" color={Colors.brownMuted} style={styles.sub}>
-        Files shared by your property team
+        Your uploads &amp; files shared by your property team
       </Text>
 
       {loading ? (
@@ -95,10 +98,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingBottom: 100,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  card: {},
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,6 +111,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconWrapUploaded: {
+    backgroundColor: '#D2EDBF40',
   },
   info: {
     flex: 1,
