@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { useCallback, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { CircleUserRound } from 'lucide-react-native';
+import { CircleUserRound, PartyPopper, Clock, ArrowUpDown, X } from 'lucide-react-native';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { Text } from '@/components/ui/text';
 import { CountdownCard } from '@/components/home/countdown-card';
@@ -31,12 +31,28 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatTime(time: string) {
+  const [h, m] = time.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+function formatShortDate(dateStr: string) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { move, loading: moveLoading } = useMove();
-  const { completed, total, loading: tasksLoading } = useTasks();
+  const { tasks, completed, total, loading: tasksLoading } = useTasks();
   const { unread, refetch: refetchUnread } = useUnread(move?.id);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useFocusEffect(
     useCallback(() => { refetchUnread(); }, [refetchUnread])
@@ -61,6 +77,36 @@ export default function HomeScreen() {
             {move ? `${move.unit?.building?.name ?? 'Your move'} — Unit ${move.unit?.number ?? ''}` : 'Your move at a glance'}
           </Text>
 
+          {move?.status === 'confirmed' && !bannerDismissed && (
+            <View style={styles.approvedBanner}>
+              <Pressable
+                style={styles.bannerClose}
+                onPress={() => setBannerDismissed(true)}
+                hitSlop={8}
+              >
+                <X size={14} color={Colors.brownMuted} strokeWidth={2} />
+              </Pressable>
+              <View style={styles.approvedIconWrap}>
+                <PartyPopper size={22} color={Colors.brown} strokeWidth={1.8} />
+              </View>
+              <Text variant="body" semibold color={Colors.brown} center>
+                You're approved!
+              </Text>
+              <Text variant="caption" color={Colors.brownMuted} center>
+                Your move has been confirmed by management.{'\n'}You're all set for move day.
+              </Text>
+            </View>
+          )}
+
+          {move?.status === 'pending' && (
+            <View style={styles.pendingBanner}>
+              <Clock size={15} color={Colors.brownMuted} strokeWidth={1.8} />
+              <Text variant="caption" color={Colors.brownMuted}>
+                Awaiting approval from management
+              </Text>
+            </View>
+          )}
+
           {move?.scheduled_date ? (
             <CountdownCard daysLeft={getDaysUntil(move.scheduled_date)} moveDate={formatDate(move.scheduled_date)} />
           ) : (
@@ -69,7 +115,26 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {total > 0 && <ProgressCard completed={completed} total={total} />}
+          {total > 0 && move?.status === 'pending' && <ProgressCard completed={completed} total={total} />}
+
+          {(() => {
+            const elevatorTask = tasks.find((t) => t.type === 'schedule_elevator' && t.completed && t.response?.date);
+            if (!elevatorTask) return null;
+            const r = elevatorTask.response!;
+            return (
+              <View style={styles.elevatorCard}>
+                <View style={styles.elevatorIconWrap}>
+                  <ArrowUpDown size={16} color={Colors.brown} strokeWidth={1.8} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="caption" color={Colors.brownMuted}>Elevator booked</Text>
+                  <Text variant="body" medium color={Colors.brown}>
+                    {formatShortDate(r.date)} · {formatTime(r.start_time)} — {formatTime(r.end_time)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
 
           <View style={styles.section}>
             <Text variant="label" color={Colors.brownMuted} style={styles.sectionLabel}>
@@ -97,6 +162,58 @@ const styles = StyleSheet.create({
   emptyCountdown: {
     paddingVertical: Spacing.xxl,
     alignItems: 'center',
+  },
+  approvedBanner: {
+    alignItems: 'center',
+    backgroundColor: Colors.greenLight,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  bannerClose: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    padding: Spacing.xs,
+  },
+  approvedIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.overlay,
+    borderRadius: Radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    alignSelf: 'center',
+  },
+  elevatorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.greenLight,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  elevatorIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   section: {
     marginTop: Spacing.xl,

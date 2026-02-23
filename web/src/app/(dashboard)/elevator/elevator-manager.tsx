@@ -192,10 +192,10 @@ export function ElevatorManager({ buildings }: { buildings: Building[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Elevator Scheduling</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h2 className="text-lg font-semibold tracking-tight">Elevator Scheduling</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Set up recurring time slots — residents book from these automatically
           </p>
         </div>

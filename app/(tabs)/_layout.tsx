@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
-import { Home, ClipboardList, FileText } from 'lucide-react-native';
+import { Home, ClipboardList, Landmark } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -37,8 +37,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="documents"
         options={{
-          title: 'Documents',
-          tabBarIcon: ({ color, size }) => <FileText size={size - 2} color={color} strokeWidth={1.8} />,
+          title: 'Building Info',
+          tabBarIcon: ({ color, size }) => <Landmark size={size - 2} color={color} strokeWidth={1.8} />,
         }}
       />
       <Tabs.Screen name="inventory" options={{ href: null }} />

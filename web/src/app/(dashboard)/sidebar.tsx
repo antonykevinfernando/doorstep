@@ -7,25 +7,19 @@ import { usePathname } from 'next/navigation';
 import {
   ArrowRightLeft,
   ClipboardCheck,
-  FileText,
   MessageCircle,
-  UserCheck,
+  Users,
   Settings,
   PanelLeft,
   LogOut,
-  ArrowUpDown,
-  DollarSign,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
 const navItems = [
-  { href: '/approvals', label: 'Approvals', icon: UserCheck },
+  { href: '/residents', label: 'Residents', icon: Users },
   { href: '/moves', label: 'Moves', icon: ArrowRightLeft },
   { href: '/checklists', label: 'Checklists', icon: ClipboardCheck },
-  { href: '/elevator', label: 'Elevator', icon: ArrowUpDown },
-  { href: '/deposits', label: 'Deposits', icon: DollarSign },
-  { href: '/documents', label: 'Documents', icon: FileText },
   { href: '/messages', label: 'Messages', icon: MessageCircle },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

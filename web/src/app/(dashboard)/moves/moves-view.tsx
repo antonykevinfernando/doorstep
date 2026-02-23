@@ -30,6 +30,7 @@ interface Move {
   scheduledDate: string;
   status: string;
   taskCount: number;
+  completedTaskCount: number;
 }
 
 interface TemplateItem {
@@ -303,8 +304,12 @@ export function MovesView({ moves, templates, createDialog }: Props) {
             {moves.map((move) => {
               const isActive = ['pending', 'confirmed', 'in_progress'].includes(move.status);
               return (
-                <TableRow key={move.id}>
-                  <TableCell>
+                <TableRow
+                  key={move.id}
+                  className="cursor-pointer hover:bg-black/[0.02] transition-colors"
+                  onClick={() => router.push(`/moves/${move.id}`)}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     {isActive && (
                       <input
                         type="checkbox"
@@ -332,15 +337,21 @@ export function MovesView({ moves, templates, createDialog }: Props) {
                   </TableCell>
                   <TableCell>
                     {move.taskCount > 0 ? (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <ClipboardCheck size={12} />
-                        {move.taskCount} task{move.taskCount > 1 ? 's' : ''}
+                        {move.completedTaskCount}/{move.taskCount}
+                        <span className="w-12 h-1.5 rounded-full bg-black/5 overflow-hidden">
+                          <span
+                            className="block h-full bg-[#30261E] rounded-full"
+                            style={{ width: `${(move.completedTaskCount / move.taskCount) * 100}%` }}
+                          />
+                        </span>
                       </span>
                     ) : (
                       <span className="text-xs text-muted-foreground/50">None</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     {isActive && move.taskCount === 0 && (
                       <TemplatePicker
                         templates={getTemplatesForBuilding(move.buildingId)}

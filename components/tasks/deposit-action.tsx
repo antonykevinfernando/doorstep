@@ -68,12 +68,7 @@ export function DepositAction({ taskId, config, response, onSubmit }: Props) {
       }
 
       const { url } = await res.json();
-      const result = await WebBrowser.openBrowserAsync(url);
-
-      if (result.type === 'cancel') {
-        setLoading(false);
-        return;
-      }
+      await WebBrowser.openBrowserAsync(url);
 
       const { data } = await supabase
         .from('move_tasks')

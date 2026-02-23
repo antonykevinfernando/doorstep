@@ -1,9 +1,9 @@
 import { FlatList, StyleSheet, Pressable, Linking, ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FileText, Upload } from 'lucide-react-native';
+import { FileText } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
-import { Colors, Spacing, FontFamily, FontSize, Radius } from '@/constants/theme';
+import { Colors, Spacing, Radius } from '@/constants/theme';
 import { useDocuments, type DocItem } from '@/hooks/use-documents';
 import { supabase } from '@/lib/supabase';
 
@@ -26,20 +26,17 @@ async function openDocument(filePath: string) {
 }
 
 function DocRow({ doc }: { doc: DocItem }) {
-  const isUploaded = doc.source === 'uploaded';
-  const Icon = isUploaded ? Upload : FileText;
-
   return (
     <Pressable onPress={() => openDocument(doc.file_path)}>
       <Card style={styles.card}>
         <View style={styles.row}>
-          <View style={[styles.iconWrap, isUploaded && styles.iconWrapUploaded]}>
-            <Icon size={20} color={isUploaded ? Colors.greenDark : Colors.brown} strokeWidth={1.5} />
+          <View style={styles.iconWrap}>
+            <FileText size={20} color={Colors.brown} strokeWidth={1.5} />
           </View>
           <View style={styles.info}>
             <Text variant="body" numberOfLines={1}>{doc.title}</Text>
             <Text variant="caption" color={Colors.brownMuted}>
-              {isUploaded ? 'Your upload' : 'Shared'} · {formatDate(doc.created_at)}{doc.file_size ? ` · ${formatSize(doc.file_size)}` : ''}
+              {formatDate(doc.created_at)}{doc.file_size ? ` · ${formatSize(doc.file_size)}` : ''}
             </Text>
           </View>
         </View>
@@ -48,22 +45,22 @@ function DocRow({ doc }: { doc: DocItem }) {
   );
 }
 
-export default function DocumentsScreen() {
+export default function BuildingInfoScreen() {
   const insets = useSafeAreaInsets();
   const { docs, loading } = useDocuments();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing.md }]}>
-      <Text variant="title" style={styles.title}>Documents</Text>
+      <Text variant="title" style={styles.title}>Building Info</Text>
       <Text variant="caption" color={Colors.brownMuted} style={styles.sub}>
-        Your uploads &amp; files shared by your property team
+        Welcome info from your building
       </Text>
 
       {loading ? (
         <ActivityIndicator color={Colors.brown} style={{ marginTop: Spacing.xxl }} />
       ) : docs.length === 0 ? (
         <Text variant="body" color={Colors.brownMuted} style={styles.empty}>
-          No documents shared yet.
+          No building info shared yet.
         </Text>
       ) : (
         <FlatList
@@ -111,9 +108,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconWrapUploaded: {
-    backgroundColor: '#D2EDBF40',
   },
   info: {
     flex: 1,

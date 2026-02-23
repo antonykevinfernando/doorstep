@@ -37,11 +37,13 @@ export default async function MovesPage() {
 
   const { data: taskCounts } = await supabase
     .from('move_tasks')
-    .select('move_id');
+    .select('move_id, completed');
 
-  const moveTaskMap: Record<string, number> = {};
+  const moveTaskMap: Record<string, { total: number; completed: number }> = {};
   for (const t of (taskCounts ?? [])) {
-    moveTaskMap[t.move_id] = (moveTaskMap[t.move_id] ?? 0) + 1;
+    if (!moveTaskMap[t.move_id]) moveTaskMap[t.move_id] = { total: 0, completed: 0 };
+    moveTaskMap[t.move_id].total++;
+    if (t.completed) moveTaskMap[t.move_id].completed++;
   }
 
   return (
@@ -55,7 +57,8 @@ export default async function MovesPage() {
         type: m.type,
         scheduledDate: m.scheduled_date,
         status: m.status,
-        taskCount: moveTaskMap[m.id] ?? 0,
+        taskCount: moveTaskMap[m.id]?.total ?? 0,
+        completedTaskCount: moveTaskMap[m.id]?.completed ?? 0,
       }))}
       templates={(templates ?? []).map((t: any) => ({
         id: t.id,

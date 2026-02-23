@@ -3,18 +3,15 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
-interface InviteAndCreateMoveInput {
+interface InviteResidentInput {
   residentName: string;
   residentEmail: string;
   buildingId: string;
   unitNumber: string;
-  type: 'move_in' | 'move_out';
   scheduledDate: string;
-  timeSlot?: string;
-  notes?: string;
 }
 
-export async function inviteResidentAndCreateMove(input: InviteAndCreateMoveInput) {
+export async function inviteResident(input: InviteResidentInput) {
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -51,7 +48,6 @@ export async function inviteResidentAndCreateMove(input: InviteAndCreateMoveInpu
 
   if (!unitId) return { error: 'Failed to resolve unit' };
 
-  // Create user + generate invite link (no email sent — avoids rate limits)
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'invite',
     email: input.residentEmail,
@@ -68,7 +64,6 @@ export async function inviteResidentAndCreateMove(input: InviteAndCreateMoveInpu
 
   const residentId = linkData.user.id;
 
-  // Pre-approve and link to org
   await admin.from('profiles')
     .update({
       approved: true,
@@ -79,20 +74,16 @@ export async function inviteResidentAndCreateMove(input: InviteAndCreateMoveInpu
     })
     .eq('id', residentId);
 
-  // Create the move
   const { data: moveData, error: moveError } = await admin.from('moves').insert({
-    type: input.type,
+    type: 'move_in',
     status: 'pending',
     resident_id: residentId,
     unit_id: unitId,
     scheduled_date: input.scheduledDate,
-    time_slot: input.timeSlot || null,
-    notes: input.notes || null,
   }).select('id').single();
 
   if (moveError) return { error: moveError.message };
 
-  // Auto-populate move_tasks from checklist templates for this building
   if (moveData) {
     const { data: templateItems } = await admin
       .from('checklist_template_items')
