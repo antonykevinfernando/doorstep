@@ -121,6 +121,8 @@ export default function HomeScreen() {
             const elevatorTask = tasks.find((t) => t.type === 'schedule_elevator' && t.completed && t.response?.date);
             if (!elevatorTask) return null;
             const r = elevatorTask.response!;
+            const today = new Date().toISOString().split('T')[0];
+            if (r.date < today) return null;
             return (
               <View style={styles.elevatorCard}>
                 <View style={styles.elevatorIconWrap}>
@@ -140,7 +142,7 @@ export default function HomeScreen() {
             <Text variant="label" color={Colors.brownMuted} style={styles.sectionLabel}>
               QUICK ACTIONS
             </Text>
-            <QuickActions unread={unread} />
+            <QuickActions approved={move?.status === 'confirmed'} />
           </View>
         </>
       )}

@@ -22,13 +22,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { UserPlus, Copy, Check, ChevronDown, Search } from 'lucide-react';
-import { inviteResident } from './actions';
+import { UserPlus, Copy, Check, ChevronDown, Search, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { inviteResident, updateResident, deleteResident } from './actions';
 
 interface Resident {
   id: string;
   fullName: string;
   approved: boolean;
+  buildingId: string;
   buildingName: string;
   unitNumber: string;
   moveInDate: string | null;
@@ -235,6 +236,152 @@ function InviteResidentDialog({ buildings }: { buildings: Building[] }) {
   );
 }
 
+function EditResidentDialog({
+  resident,
+  buildings,
+  open,
+  onOpenChange,
+}: {
+  resident: Resident;
+  buildings: Building[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    name: resident.fullName,
+    building_id: resident.buildingId,
+    unit_number: resident.unitNumber,
+    move_in_date: resident.moveInDate ?? '',
+  });
+
+  function update(field: string, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    const result = await updateResident({
+      residentId: resident.id,
+      fullName: form.name,
+      buildingId: form.building_id,
+      unitNumber: form.unit_number,
+      moveInDate: form.move_in_date,
+    });
+    setLoading(false);
+    if (result.error) { setError(result.error); return; }
+    onOpenChange(false);
+    router.refresh();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>Edit Resident</DialogTitle>
+          <DialogDescription>Update resident details.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Full name</Label>
+            <Input value={form.name} onChange={(e) => update('name', e.target.value)} required className="h-[42px]" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Building</Label>
+              <BuildingDropdown value={form.building_id} onChange={(v) => update('building_id', v)} buildings={buildings} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Unit</Label>
+              <Input value={form.unit_number} onChange={(e) => update('unit_number', e.target.value)} required className="h-[42px]" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Move-in date</Label>
+            <Input type="date" value={form.move_in_date} onChange={(e) => update('move_in_date', e.target.value)} className="h-[42px]" />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteConfirmDialog({
+  resident,
+  open,
+  onOpenChange,
+}: {
+  resident: Resident;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleDelete() {
+    setLoading(true);
+    await deleteResident(resident.id);
+    setLoading(false);
+    onOpenChange(false);
+    router.refresh();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[380px]">
+        <DialogHeader>
+          <DialogTitle>Delete Resident</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to remove <span className="font-medium text-foreground">{resident.fullName}</span>? This will also delete their move and tasks. This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-2 justify-end mt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+            {loading ? 'Deleting...' : 'Delete'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ResidentActions({ resident, buildings }: { resident: Resident; buildings: Building[] }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <div className="flex gap-1 justify-end">
+        <button
+          onClick={() => setEditOpen(true)}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+        >
+          <Pencil size={13} />
+        </button>
+        <button
+          onClick={() => setDeleteOpen(true)}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+      <EditResidentDialog resident={resident} buildings={buildings} open={editOpen} onOpenChange={setEditOpen} />
+      <DeleteConfirmDialog resident={resident} open={deleteOpen} onOpenChange={setDeleteOpen} />
+    </>
+  );
+}
+
 interface Props {
   residents: Resident[];
   buildings: Building[];
@@ -288,12 +435,13 @@ export function ResidentsView({ residents, buildings }: Props) {
               <TableHead>Move-in</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Added</TableHead>
+              <TableHead className="w-[80px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   {search ? 'No residents match your search.' : 'No residents yet. Invite one to get started.'}
                 </TableCell>
               </TableRow>
@@ -316,6 +464,9 @@ export function ResidentsView({ residents, buildings }: Props) {
                 <TableCell className="text-muted-foreground text-sm">
                   {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </TableCell>
+                <TableCell>
+                  <ResidentActions resident={r} buildings={buildings} />
+                </TableCell>
               </TableRow>
             ))}
             {active.map((r) => (
@@ -335,6 +486,9 @@ export function ResidentsView({ residents, buildings }: Props) {
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </TableCell>
+                <TableCell>
+                  <ResidentActions resident={r} buildings={buildings} />
                 </TableCell>
               </TableRow>
             ))}

@@ -97,8 +97,8 @@ function formatTime(time: string) {
   return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-export function ElevatorManager({ buildings }: { buildings: Building[] }) {
-  const [buildingId, setBuildingId] = useState('');
+export function ElevatorManager({ buildings, initialBuildingId }: { buildings: Building[]; initialBuildingId?: string }) {
+  const [buildingId, setBuildingId] = useState(initialBuildingId ?? '');
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
@@ -192,21 +192,25 @@ export function ElevatorManager({ buildings }: { buildings: Building[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Elevator Scheduling</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Set up recurring time slots — residents book from these automatically
-          </p>
-        </div>
-      </div>
+      {!initialBuildingId && (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Elevator Scheduling</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Set up recurring time slots — residents book from these automatically
+              </p>
+            </div>
+          </div>
 
-      <div className="rounded-xl border border-black/5 bg-white/60 backdrop-blur-sm p-6 mb-6">
-        <div className="max-w-xs">
-          <label className="text-xs text-muted-foreground mb-1.5 block">Building</label>
-          <BuildingDropdown value={buildingId} onChange={setBuildingId} buildings={buildings} />
-        </div>
-      </div>
+          <div className="rounded-xl border border-black/5 bg-white/60 backdrop-blur-sm p-6 mb-6">
+            <div className="max-w-xs">
+              <label className="text-xs text-muted-foreground mb-1.5 block">Building</label>
+              <BuildingDropdown value={buildingId} onChange={setBuildingId} buildings={buildings} />
+            </div>
+          </div>
+        </>
+      )}
 
       {buildingId && !loading && (
         <>

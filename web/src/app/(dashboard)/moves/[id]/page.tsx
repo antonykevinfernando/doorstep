@@ -38,11 +38,11 @@ export default async function MoveDetailPage({ params }: { params: { id: string 
     .eq('move_id', params.id)
     .order('date', { ascending: true });
 
-  const { data: deposits } = await supabase
-    .from('deposits')
-    .select('id, amount_cents, status, created_at, stripe_payment_intent_id')
-    .eq('move_id', params.id)
-    .order('created_at', { ascending: false });
+    const { data: deposits } = await supabase
+      .from('deposits')
+      .select('id, amount_cents, status, created_at, stripe_payment_intent_id, notes')
+      .eq('move_id', params.id)
+      .order('created_at', { ascending: false });
 
   return (
     <MoveDetail
@@ -87,6 +87,7 @@ export default async function MoveDetailPage({ params }: { params: { id: string 
         amountCents: d.amount_cents,
         status: d.status,
         createdAt: d.created_at,
+        notes: d.notes,
       }))}
     />
   );

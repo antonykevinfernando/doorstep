@@ -21,12 +21,19 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push('/');
+      const role = data.user?.user_metadata?.role;
+      if (role === 'vendor') {
+        router.push('/vendor');
+      } else if (role === 'mover') {
+        router.push('/mover');
+      } else {
+        router.push('/');
+      }
       router.refresh();
     }
   }
@@ -78,9 +85,14 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <p className="text-xs text-center text-muted-foreground mt-8">
-          Are you a resident? Download the Doorstep app to get started.
-        </p>
+        <div className="text-xs text-center text-muted-foreground mt-8 space-y-1">
+          <p>Are you a resident? Download the Doorstep app to get started.</p>
+          <p>
+            <Link href="/vendor/signup" className="underline font-medium text-foreground/70 hover:text-foreground">Vendor signup</Link>
+            {' · '}
+            <Link href="/mover/signup" className="underline font-medium text-foreground/70 hover:text-foreground">Mover signup</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

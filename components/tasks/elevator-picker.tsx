@@ -31,7 +31,7 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-const LOOKAHEAD_DAYS = 14;
+const LOOKAHEAD_DAYS = 60;
 
 export function ElevatorPicker({ taskId, response, onSubmit }: Props) {
   const { move } = useMove();

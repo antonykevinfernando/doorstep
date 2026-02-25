@@ -85,6 +85,42 @@ export default function RootLayout() {
               name="mover/[id]"
               options={{ title: '' }}
             />
+            <Stack.Screen
+              name="deal/[id]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="movers-list"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="book-mover/[id]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="services"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="services/elevator"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="services/keyfob"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="services/buzzer"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="activity"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="activity/[id]"
+              options={{ headerShown: false }}
+            />
           </Stack>
         </RouteGuard>
         {showSplash && <SplashAnimated onFinish={handleSplashFinish} />}

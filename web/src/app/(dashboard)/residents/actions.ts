@@ -107,3 +107,81 @@ export async function inviteResident(input: InviteResidentInput) {
 
   return { success: true, inviteLink: linkData.properties?.action_link };
 }
+
+interface UpdateResidentInput {
+  residentId: string;
+  fullName: string;
+  buildingId: string;
+  unitNumber: string;
+  moveInDate: string;
+}
+
+export async function updateResident(input: UpdateResidentInput) {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  if (!currentUser) return { error: 'Not authenticated' };
+
+  const { error } = await admin.from('profiles').update({
+    full_name: input.fullName,
+    requested_building_id: input.buildingId,
+    requested_unit_number: input.unitNumber,
+    requested_move_in_date: input.moveInDate || null,
+  }).eq('id', input.residentId);
+
+  if (error) return { error: error.message };
+
+  // Also update the move's scheduled_date if changed
+  if (input.moveInDate) {
+    let unitId: string | null = null;
+    const { data: existingUnit } = await admin
+      .from('units')
+      .select('id')
+      .eq('building_id', input.buildingId)
+      .eq('number', input.unitNumber)
+      .single();
+
+    if (existingUnit) {
+      unitId = existingUnit.id;
+    } else {
+      const { data: newUnit } = await admin
+        .from('units')
+        .insert({ building_id: input.buildingId, number: input.unitNumber })
+        .select('id')
+        .single();
+      unitId = newUnit?.id ?? null;
+    }
+
+    if (unitId) {
+      await admin.from('moves').update({
+        scheduled_date: input.moveInDate,
+        unit_id: unitId,
+      }).eq('resident_id', input.residentId);
+    }
+  }
+
+  return { success: true };
+}
+
+export async function deleteResident(residentId: string) {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  if (!currentUser) return { error: 'Not authenticated' };
+
+  // Delete move tasks, then moves, then profile, then auth user
+  const { data: moves } = await admin.from('moves').select('id').eq('resident_id', residentId);
+  if (moves) {
+    for (const m of moves) {
+      await admin.from('move_tasks').delete().eq('move_id', m.id);
+    }
+    await admin.from('moves').delete().eq('resident_id', residentId);
+  }
+
+  await admin.from('profiles').delete().eq('id', residentId);
+  await admin.auth.admin.deleteUser(residentId);
+
+  return { success: true };
+}

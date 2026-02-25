@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { View, FlatList, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Send } from 'lucide-react-native';
+import { Send, ArrowLeft } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { Colors, Spacing, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { useMessages, type MessageItem } from '@/hooks/use-messages';
@@ -21,6 +22,7 @@ function MessageBubble({ msg, isMe }: { msg: MessageItem; isMe: boolean }) {
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { messages, loading, send, currentUserId } = useMessages();
   const [text, setText] = useState('');
   const listRef = useRef<FlatList>(null);
@@ -43,7 +45,12 @@ export default function MessagesScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      <Text variant="title" style={styles.title}>Messages</Text>
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => router.navigate('/')} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+          <ArrowLeft size={22} color={Colors.brown} strokeWidth={1.8} />
+        </Pressable>
+        <Text variant="title">Messages</Text>
+      </View>
 
       {loading ? (
         <ActivityIndicator color={Colors.brown} style={{ flex: 1 }} />
@@ -89,7 +96,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cream,
     paddingHorizontal: Spacing.lg,
   },
-  title: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
     marginBottom: Spacing.md,
   },
   emptyWrap: {

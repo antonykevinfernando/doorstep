@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
-    const { deposit_id } = await req.json();
+    const { deposit_id, amount_cents, notes } = await req.json();
     if (!deposit_id) {
       return NextResponse.json({ error: 'deposit_id is required' }, { status: 400 });
     }
@@ -27,14 +27,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Cannot capture a ${deposit.status} deposit` }, { status: 400 });
     }
 
-    await stripe.paymentIntents.capture(deposit.stripe_payment_intent_id);
+    const captureAmount = amount_cents ?? deposit.amount_cents;
+    if (captureAmount <= 0 || captureAmount > deposit.amount_cents) {
+      return NextResponse.json({ error: 'Invalid capture amount' }, { status: 400 });
+    }
+
+    await stripe.paymentIntents.capture(deposit.stripe_payment_intent_id, {
+      amount_to_capture: captureAmount,
+    });
 
     await supabase
       .from('deposits')
-      .update({ status: 'captured' })
+      .update({
+        status: 'captured',
+        amount_cents: captureAmount,
+        ...(notes ? { notes } : {}),
+      })
       .eq('id', deposit_id);
 
-    return NextResponse.json({ success: true, status: 'captured' });
+    return NextResponse.json({ success: true, status: 'captured', amount_cents: captureAmount });
   } catch (err: any) {
     console.error('Stripe capture error:', err);
     return NextResponse.json({ error: err.message ?? 'Internal error' }, { status: 500 });

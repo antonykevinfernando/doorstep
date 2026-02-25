@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
-import { Home, ClipboardList, Landmark } from 'lucide-react-native';
+import { Home, MessageCircle, Landmark, Store } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -28,10 +28,18 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tasks"
+        name="messages"
         options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, size }) => <ClipboardList size={size - 2} color={color} strokeWidth={1.8} />,
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => <MessageCircle size={size - 2} color={color} strokeWidth={1.8} />,
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="marketplace"
+        options={{
+          title: 'Marketplace',
+          tabBarIcon: ({ color, size }) => <Store size={size - 2} color={color} strokeWidth={1.8} />,
         }}
       />
       <Tabs.Screen
@@ -41,9 +49,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Landmark size={size - 2} color={color} strokeWidth={1.8} />,
         }}
       />
-      <Tabs.Screen name="inventory" options={{ href: null }} />
-      <Tabs.Screen name="messages" options={{ href: null }} />
-      <Tabs.Screen name="movers" options={{ href: null }} />
+      <Tabs.Screen name="tasks" options={{ href: null }} />
     </Tabs>
   );
 }

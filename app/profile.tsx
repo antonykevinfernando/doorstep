@@ -14,6 +14,8 @@ import {
   Check,
   Mail,
   User,
+  Truck,
+  PhoneCall,
 } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -21,6 +23,7 @@ import { Colors, Spacing, Radius } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useMove } from '@/hooks/use-move';
 import { useTasks, type TaskItem } from '@/hooks/use-tasks';
+import { useBookings, type Booking } from '@/hooks/use-bookings';
 import { supabase } from '@/lib/supabase';
 
 function formatTime(time: string) {
@@ -78,6 +81,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { move } = useMove();
   const { tasks } = useTasks();
+  const { bookings } = useBookings();
 
   const buzzer = findTask(tasks, 'register_buzzer');
   const keyfob = findTask(tasks, 'key_fob_pickup');
@@ -241,6 +245,49 @@ export default function ProfileScreen() {
         </Card>
       )}
 
+      {/* Mover Booking */}
+      {bookings.length > 0 && bookings.map((b) => (
+        <Card key={b.id}>
+          <Text variant="body" semibold style={styles.sectionTitle}>Mover Booking</Text>
+          <View style={styles.moverBookingRow}>
+            <View style={styles.moverBookingIcon}>
+              <Truck size={18} color={Colors.cream} strokeWidth={1.8} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="body" medium color={Colors.brown}>{b.moverName}</Text>
+              <Text variant="caption" color={Colors.brownMuted}>
+                {new Date(b.scheduledDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {b.timeSlot ? ` · ${b.timeSlot}` : ''}
+              </Text>
+            </View>
+            <View style={[
+              styles.moverStatusBadge,
+              b.status === 'confirmed' && styles.moverStatusConfirmed,
+              b.status === 'completed' && styles.moverStatusCompleted,
+              b.status === 'cancelled' && styles.moverStatusCancelled,
+            ]}>
+              <Text variant="label" color={
+                b.status === 'pending' ? '#92702B' :
+                b.status === 'confirmed' ? Colors.greenDark :
+                b.status === 'cancelled' ? Colors.red :
+                Colors.brownMuted
+              }>
+                {b.status.charAt(0).toUpperCase() + b.status.slice(1)}
+              </Text>
+            </View>
+          </View>
+          {b.status === 'confirmed' && b.moverPhone && (
+            <Pressable
+              style={({ pressed }) => [styles.callMoverBtn, pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] }]}
+              onPress={() => Linking.openURL(`tel:${b.moverPhone}`)}
+            >
+              <PhoneCall size={15} color={Colors.cream} strokeWidth={1.8} />
+              <Text variant="body" medium color={Colors.cream}>Call Mover</Text>
+            </Pressable>
+          )}
+        </Card>
+      ))}
+
       {/* Deposit */}
       {hasDeposit && (
         <Card>
@@ -369,6 +416,44 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.greenLight,
     borderRadius: Radius.sm,
     padding: Spacing.md,
+  },
+  moverBookingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  moverBookingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.brown,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moverStatusBadge: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  moverStatusConfirmed: {
+    backgroundColor: Colors.greenLight,
+  },
+  moverStatusCompleted: {
+    backgroundColor: Colors.overlay,
+  },
+  moverStatusCancelled: {
+    backgroundColor: '#FEE2E2',
+  },
+  callMoverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.brown,
+    borderRadius: Radius.sm,
+    paddingVertical: 12,
   },
   depositRow: {
     flexDirection: 'row',

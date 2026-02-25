@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
-    const { deposit_id } = await req.json();
+    const { deposit_id, notes } = await req.json();
     if (!deposit_id) {
       return NextResponse.json({ error: 'deposit_id is required' }, { status: 400 });
     }
@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
 
     await supabase
       .from('deposits')
-      .update({ status: 'released' })
+      .update({
+        status: 'released',
+        ...(notes ? { notes } : {}),
+      })
       .eq('id', deposit_id);
 
     return NextResponse.json({ success: true, status: 'released' });

@@ -7,6 +7,9 @@ import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   ArrowLeft,
   Check,
@@ -69,6 +72,7 @@ interface Deposit {
   amountCents: number;
   status: string;
   createdAt: string;
+  notes?: string | null;
 }
 
 interface Props {
@@ -117,7 +121,10 @@ export function MoveDetail({ move, tasks, documents, elevatorSlots, deposits }: 
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [actingDeposit, setActingDeposit] = useState<string | null>(null);
+  const [depositDialog, setDepositDialog] = useState<{ deposit: Deposit; action: 'capture' | 'release' } | null>(null);
+  const [dialogAmount, setDialogAmount] = useState('');
+  const [dialogNotes, setDialogNotes] = useState('');
+  const [dialogSubmitting, setDialogSubmitting] = useState(false);
 
   const completedTasks = tasks.filter((t) => t.completed).length;
 
@@ -140,13 +147,32 @@ export function MoveDetail({ move, tasks, documents, elevatorSlots, deposits }: 
     if (data?.signedUrl) window.open(data.signedUrl, '_blank');
   }
 
-  async function handleDepositAction(depositId: string, action: 'capture' | 'release') {
-    setActingDeposit(depositId);
+  function openDepositDialog(deposit: Deposit, action: 'capture' | 'release') {
+    setDepositDialog({ deposit, action });
+    setDialogAmount((deposit.amountCents / 100).toFixed(2));
+    setDialogNotes('');
+  }
+
+  async function submitDepositDialog() {
+    if (!depositDialog) return;
+    setDialogSubmitting(true);
+    const { deposit, action } = depositDialog;
     try {
+      const body: Record<string, any> = { deposit_id: deposit.id };
+      if (dialogNotes.trim()) body.notes = dialogNotes.trim();
+      if (action === 'capture') {
+        const cents = Math.round(parseFloat(dialogAmount) * 100);
+        if (isNaN(cents) || cents <= 0 || cents > deposit.amountCents) {
+          alert('Enter a valid amount between $0.01 and the authorized amount.');
+          setDialogSubmitting(false);
+          return;
+        }
+        body.amount_cents = cents;
+      }
       const res = await fetch(`/api/stripe/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deposit_id: depositId }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const { error } = await res.json();
@@ -156,7 +182,8 @@ export function MoveDetail({ move, tasks, documents, elevatorSlots, deposits }: 
     } catch {
       alert('Network error');
     }
-    setActingDeposit(null);
+    setDialogSubmitting(false);
+    setDepositDialog(null);
   }
 
   const currentStatusIdx = statusFlow.indexOf(move.status as any);
@@ -485,7 +512,7 @@ export function MoveDetail({ move, tasks, documents, elevatorSlots, deposits }: 
           ) : (
             <div className="space-y-3">
               {deposits.map((d) => {
-                const statusStyle: Record<string, string> = {
+                const depositStatusStyle: Record<string, string> = {
                   authorized: 'bg-blue-100 text-blue-800',
                   captured: 'bg-green-100 text-green-800',
                   released: 'bg-gray-100 text-gray-600',
@@ -494,44 +521,51 @@ export function MoveDetail({ move, tasks, documents, elevatorSlots, deposits }: 
                 return (
                   <div
                     key={d.id}
-                    className="rounded-xl border border-black/5 bg-white/60 backdrop-blur-sm p-5 flex items-center gap-5"
+                    className="rounded-xl border border-black/5 bg-white/60 backdrop-blur-sm p-5"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#E8F5DC]">
-                      <DollarSign size={19} className="text-[#30261E]" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-lg font-semibold tabular-nums">${(d.amountCents / 100).toFixed(2)}</p>
-                        <Badge variant="secondary" className={statusStyle[d.status] ?? ''}>
-                          {d.status}
-                        </Badge>
+                    <div className="flex items-center gap-5">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#E8F5DC]">
+                        <DollarSign size={19} className="text-[#30261E]" />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-lg font-semibold tabular-nums">${(d.amountCents / 100).toFixed(2)}</p>
+                          <Badge variant="secondary" className={depositStatusStyle[d.status] ?? ''}>
+                            {d.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      {d.status === 'authorized' && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDepositDialog(d, 'capture')}
+                            className="gap-1.5 text-xs"
+                          >
+                            <ArrowDownToLine size={13} />
+                            Capture
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openDepositDialog(d, 'release')}
+                            className="gap-1.5 text-xs text-muted-foreground"
+                          >
+                            <Undo2 size={13} />
+                            Release
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {d.status === 'authorized' && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDepositAction(d.id, 'capture')}
-                          disabled={actingDeposit === d.id}
-                          className="gap-1.5 text-xs"
-                        >
-                          <ArrowDownToLine size={13} />
-                          Capture
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDepositAction(d.id, 'release')}
-                          disabled={actingDeposit === d.id}
-                          className="gap-1.5 text-xs text-muted-foreground"
-                        >
-                          <Undo2 size={13} />
-                          Release
-                        </Button>
+                    {d.notes && (
+                      <div className="mt-3 pt-3 border-t border-black/5">
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">Note:</span> {d.notes}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -541,6 +575,79 @@ export function MoveDetail({ move, tasks, documents, elevatorSlots, deposits }: 
           )}
         </div>
       )}
+
+      {/* Deposit action dialog */}
+      <Dialog open={!!depositDialog} onOpenChange={(open) => { if (!open) setDepositDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {depositDialog?.action === 'capture' ? 'Capture Deposit' : 'Release Deposit'}
+            </DialogTitle>
+          </DialogHeader>
+          {depositDialog && (
+            <div className="space-y-4 py-2">
+              {depositDialog.action === 'capture' ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="capture-amount">Amount to capture</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                      <Input
+                        id="capture-amount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={(depositDialog.deposit.amountCents / 100).toFixed(2)}
+                        value={dialogAmount}
+                        onChange={(e) => setDialogAmount(e.target.value)}
+                        className="pl-7 tabular-nums"
+                      />
+                    </div>
+                    {(() => {
+                      const capturedCents = Math.round(parseFloat(dialogAmount) * 100);
+                      const diff = depositDialog.deposit.amountCents - capturedCents;
+                      if (!isNaN(capturedCents) && diff > 0) {
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            Remaining ${(diff / 100).toFixed(2)} will be released back to the resident.
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This will release the full ${(depositDialog.deposit.amountCents / 100).toFixed(2)} hold back to the resident.
+                </p>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="deposit-notes">Notes (optional)</Label>
+                <Textarea
+                  id="deposit-notes"
+                  placeholder={depositDialog.action === 'capture' ? 'Reason for charge...' : 'Reason for release...'}
+                  value={dialogNotes}
+                  onChange={(e) => setDialogNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDepositDialog(null)} disabled={dialogSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={submitDepositDialog} disabled={dialogSubmitting}>
+              {dialogSubmitting
+                ? 'Processing...'
+                : depositDialog?.action === 'capture'
+                  ? 'Capture'
+                  : 'Release'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

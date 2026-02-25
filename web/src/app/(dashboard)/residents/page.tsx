@@ -22,6 +22,7 @@ export default async function ResidentsPage() {
         id: r.id,
         fullName: r.full_name || 'Unnamed',
         approved: r.approved,
+        buildingId: r.requested_building_id ?? '',
         buildingName: r.building?.name ?? '',
         unitNumber: r.requested_unit_number ?? '',
         moveInDate: r.requested_move_in_date,

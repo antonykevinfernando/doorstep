@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server';
 import { ProfileSection } from './profile-section';
 import { OrgSection } from './org-section';
 import { BuildingsSection } from './buildings-section';
-import { ElevatorManager } from '../elevator/elevator-manager';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -52,10 +51,6 @@ export default async function SettingsPage() {
         <BuildingsSection
           buildings={(buildings ?? []).map((b: any) => ({ id: b.id, name: b.name, address: b.address }))}
           orgId={profile?.org_id ?? ''}
-        />
-
-        <ElevatorManager
-          buildings={(buildings ?? []).map((b: any) => ({ id: b.id, name: b.name }))}
         />
       </div>
     </div>

@@ -31,7 +31,9 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage =
     request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname === '/signup';
+    request.nextUrl.pathname === '/signup' ||
+    request.nextUrl.pathname === '/vendor/signup' ||
+    request.nextUrl.pathname === '/mover/signup';
 
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
 
@@ -42,8 +44,20 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthPage) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    if (profile?.role === 'vendor') {
+      url.pathname = '/vendor';
+    } else if (profile?.role === 'mover') {
+      url.pathname = '/mover';
+    } else {
+      url.pathname = '/';
+    }
     return NextResponse.redirect(url);
   }
 
